@@ -69,6 +69,7 @@ Runtime Event Log
 
 ## Project Structure
 
+```
 pipeline_metrics_collector/
 ├── src/
 │   └── pipeline_metrics_collector/
@@ -94,6 +95,7 @@ pipeline_metrics_collector/
 ├── pyproject.toml
 ├── README.md
 └── .gitignore
+```
 
 ## Installation
 
