@@ -3,11 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any
 
-from pipeline_metrics_collector.contract import (
-    MetricRecord,
-    MetricsSummary,
-)
-
+from pipeline_metrics_collector.contract import MetricRecord, MetricsSummary
 
 RUNTIME_EVENT_TYPES = {
     "RuntimeStarted",
@@ -33,10 +29,7 @@ def get_event_type(
 def count_event_types(
     events: list[dict[str, Any]],
 ) -> dict[str, int]:
-    counts = Counter(
-        get_event_type(event)
-        for event in events
-    )
+    counts = Counter(get_event_type(event) for event in events)
 
     return dict(counts)
 
@@ -183,3 +176,108 @@ def metric_records_to_map(
         result[metric.name] = metric.value
 
     return result
+
+
+def get_consumer_summary(
+    consumer_report: dict[str, Any],
+) -> dict[str, Any]:
+    summary = consumer_report.get("summary", {})
+
+    if not isinstance(summary, dict):
+        return {}
+
+    return summary
+
+
+def get_consumer_subscription(
+    consumer_report: dict[str, Any],
+) -> dict[str, Any]:
+    subscription = consumer_report.get("subscription", {})
+
+    if not isinstance(subscription, dict):
+        return {}
+
+    return subscription
+
+
+def build_consumer_metrics_summary(
+    consumer_report: dict[str, Any],
+    base_summary: MetricsSummary | None = None,
+) -> MetricsSummary:
+    summary = base_summary or MetricsSummary()
+    consumer_summary = get_consumer_summary(consumer_report)
+
+    summary.accepted_events = int(consumer_summary.get("accepted_events", 0))
+    summary.rejected_events = int(consumer_summary.get("rejected_events", 0))
+    summary.acceptance_rate = float(consumer_summary.get("acceptance_rate", 0.0))
+
+    return summary
+
+
+def build_consumer_metric_records(
+    consumer_report: dict[str, Any],
+) -> list[MetricRecord]:
+    summary = get_consumer_summary(consumer_report)
+    subscription = get_consumer_subscription(consumer_report)
+
+    event_types = subscription.get("event_types", [])
+
+    if not isinstance(event_types, list):
+        event_types = []
+
+    enabled = subscription.get("enabled", False)
+    status = consumer_report.get("status", "unknown")
+
+    return [
+        MetricRecord(
+            name="consumer_processed_events",
+            value=int(summary.get("processed_events", 0)),
+            unit="count",
+            category="consumer",
+        ),
+        MetricRecord(
+            name="consumer_accepted_events",
+            value=int(summary.get("accepted_events", 0)),
+            unit="count",
+            category="consumer",
+        ),
+        MetricRecord(
+            name="consumer_rejected_events",
+            value=int(summary.get("rejected_events", 0)),
+            unit="count",
+            category="consumer",
+        ),
+        MetricRecord(
+            name="consumer_acceptance_rate",
+            value=float(summary.get("acceptance_rate", 0.0)),
+            unit="ratio",
+            category="consumer",
+        ),
+        MetricRecord(
+            name="consumer_result_count",
+            value=int(summary.get("result_count", 0)),
+            unit="count",
+            category="consumer",
+        ),
+        MetricRecord(
+            name="consumer_subscription_count",
+            value=len(event_types),
+            unit="count",
+            category="consumer",
+        ),
+        MetricRecord(
+            name="consumer_enabled",
+            value=1 if enabled is True else 0,
+            unit="boolean",
+            category="consumer",
+        ),
+        MetricRecord(
+            name="consumer_status",
+            value=1 if status == "completed" else 0,
+            unit="boolean",
+            category="consumer",
+            labels={
+                "status": str(status),
+            },
+        ),
+    ]

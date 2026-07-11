@@ -1,8 +1,12 @@
 from pipeline_metrics_collector.metrics import (
+    build_consumer_metric_records,
+    build_consumer_metrics_summary,
     build_runtime_metric_records,
     build_runtime_metrics_summary,
     count_event_types,
     count_execution_outcomes,
+    get_consumer_subscription,
+    get_consumer_summary,
     get_event_type,
     metric_records_to_map,
 )
@@ -150,14 +154,11 @@ def test_build_runtime_metric_records_contains_event_type_labels():
     metrics = build_runtime_metric_records(events)
 
     event_type_metrics = [
-        metric
-        for metric in metrics
-        if metric.name == "event_type_total"
+        metric for metric in metrics if metric.name == "event_type_total"
     ]
 
     values = {
-        metric.labels["event_type"]: metric.value
-        for metric in event_type_metrics
+        metric.labels["event_type"]: metric.value for metric in event_type_metrics
     }
 
     assert values == {
@@ -176,3 +177,149 @@ def test_metric_records_to_map_skips_labelled_metrics():
 
     assert "event_total" in metric_map
     assert "event_type_total" not in metric_map
+
+
+def make_consumer_report() -> dict:
+    return {
+        "report_version": "1.0",
+        "status": "completed",
+        "subscription": {
+            "consumer_id": "runtime-observer",
+            "event_types": [
+                "RuntimeStarted",
+                "ArtifactRegistered",
+                "ExecutionCompleted",
+            ],
+            "enabled": True,
+        },
+        "summary": {
+            "processed_events": 5,
+            "accepted_events": 3,
+            "rejected_events": 2,
+            "result_count": 5,
+            "acceptance_rate": 0.6,
+        },
+    }
+
+
+def test_get_consumer_summary_returns_summary():
+    report = make_consumer_report()
+
+    summary = get_consumer_summary(report)
+
+    assert summary["processed_events"] == 5
+    assert summary["accepted_events"] == 3
+
+
+def test_get_consumer_summary_returns_empty_for_invalid_value():
+    assert get_consumer_summary({"summary": []}) == {}
+
+
+def test_get_consumer_subscription_returns_subscription():
+    report = make_consumer_report()
+
+    subscription = get_consumer_subscription(report)
+
+    assert subscription["consumer_id"] == "runtime-observer"
+    assert subscription["enabled"] is True
+
+
+def test_get_consumer_subscription_returns_empty_for_invalid_value():
+    assert get_consumer_subscription({"subscription": "invalid"}) == {}
+
+
+def test_build_consumer_metrics_summary_updates_values():
+    report = make_consumer_report()
+
+    summary = build_consumer_metrics_summary(report)
+
+    assert summary.accepted_events == 3
+    assert summary.rejected_events == 2
+    assert summary.acceptance_rate == 0.6
+
+
+def test_build_consumer_metrics_summary_preserves_base_summary():
+    report = make_consumer_report()
+
+    base_summary = build_runtime_metrics_summary(
+        events=[
+            make_event("RuntimeStarted"),
+            make_event("ExecutionRequested"),
+            make_event("ExecutionCompleted"),
+        ],
+        artifact_count=2,
+    )
+
+    summary = build_consumer_metrics_summary(
+        consumer_report=report,
+        base_summary=base_summary,
+    )
+
+    assert summary is base_summary
+    assert summary.event_count == 3
+    assert summary.artifact_count == 2
+    assert summary.execution_requested == 1
+    assert summary.execution_completed == 1
+    assert summary.accepted_events == 3
+    assert summary.rejected_events == 2
+    assert summary.acceptance_rate == 0.6
+
+
+def test_build_consumer_metric_records_contains_core_metrics():
+    report = make_consumer_report()
+
+    metrics = build_consumer_metric_records(report)
+    metric_map = metric_records_to_map(metrics)
+
+    assert metric_map["consumer_processed_events"] == 5
+    assert metric_map["consumer_accepted_events"] == 3
+    assert metric_map["consumer_rejected_events"] == 2
+    assert metric_map["consumer_acceptance_rate"] == 0.6
+    assert metric_map["consumer_result_count"] == 5
+    assert metric_map["consumer_subscription_count"] == 3
+    assert metric_map["consumer_enabled"] == 1
+
+
+def test_build_consumer_metric_records_contains_status_label():
+    report = make_consumer_report()
+
+    metrics = build_consumer_metric_records(report)
+
+    status_metric = next(
+        metric for metric in metrics if metric.name == "consumer_status"
+    )
+
+    assert status_metric.value == 1
+    assert status_metric.labels == {
+        "status": "completed",
+    }
+
+
+def test_build_consumer_metric_records_handles_disabled_consumer():
+    report = make_consumer_report()
+    report["status"] = "disabled"
+    report["subscription"]["enabled"] = False
+
+    metrics = build_consumer_metric_records(report)
+    metric_map = metric_records_to_map(metrics)
+
+    assert metric_map["consumer_enabled"] == 0
+
+    status_metric = next(
+        metric for metric in metrics if metric.name == "consumer_status"
+    )
+
+    assert status_metric.value == 0
+    assert status_metric.labels["status"] == "disabled"
+
+
+def test_build_consumer_metric_records_handles_missing_sections():
+    metrics = build_consumer_metric_records({})
+    metric_map = metric_records_to_map(metrics)
+
+    assert metric_map["consumer_processed_events"] == 0
+    assert metric_map["consumer_accepted_events"] == 0
+    assert metric_map["consumer_rejected_events"] == 0
+    assert metric_map["consumer_acceptance_rate"] == 0.0
+    assert metric_map["consumer_subscription_count"] == 0
+    assert metric_map["consumer_enabled"] == 0
