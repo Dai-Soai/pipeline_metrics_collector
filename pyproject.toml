@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pipeline-metrics-collector"
+version = "0.1.0"
+description = "Lightweight metrics collector for RADAR_SERVICE pipeline runtime data."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "RADAR_SERVICE" }
+]
+dependencies = []
+
+[project.scripts]
+pipeline-metrics = "pipeline_metrics_collector.cli:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
