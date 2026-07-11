@@ -5,17 +5,23 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pipeline-metrics-collector"
 version = "0.1.0"
-description = "Lightweight metrics collector for RADAR_SERVICE pipeline runtime data."
+description = "Collect runtime, execution, consumer, artifact, and latency metrics from RADAR_SERVICE pipeline reports."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
+license = { text = "MIT" }
 authors = [
-  { name = "RADAR_SERVICE" }
+    { name = "Dai-Soai" }
 ]
 dependencies = []
 
 [project.scripts]
 pipeline-metrics = "pipeline_metrics_collector.cli:main"
 
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.pytest.ini_options]
-pythonpath = ["src"]
 testpaths = ["tests"]
