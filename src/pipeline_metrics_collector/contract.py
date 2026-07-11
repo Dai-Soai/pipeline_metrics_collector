@@ -37,6 +37,7 @@ class MetricsSummary:
 @dataclass(slots=True)
 class MetricsReport:
     report_version: str
+    collector_version: str
     run_id: str
     generated_at: str
     status: str
@@ -94,38 +95,30 @@ def metrics_summary_from_dict(data: dict[str, Any]) -> MetricsSummary:
 def metrics_report_to_dict(report: MetricsReport) -> dict[str, Any]:
     return {
         "report_version": report.report_version,
+        "collector_version": report.collector_version,
         "run_id": report.run_id,
         "generated_at": report.generated_at,
         "status": report.status,
-        "sources": [
-            metrics_source_to_dict(source)
-            for source in report.sources
-        ],
+        "sources": [metrics_source_to_dict(source) for source in report.sources],
         "summary": metrics_summary_to_dict(report.summary),
-        "metrics": [
-            metric_record_to_dict(metric)
-            for metric in report.metrics
-        ],
+        "metrics": [metric_record_to_dict(metric) for metric in report.metrics],
         "warnings": list(report.warnings),
     }
 
 
-def metrics_report_from_dict(data: dict[str, Any]) -> MetricsReport:
+def metrics_report_from_dict(
+    data: dict[str, Any],
+) -> MetricsReport:
     return MetricsReport(
-        report_version=data["report_version"],
-        run_id=data["run_id"],
-        generated_at=data["generated_at"],
-        status=data["status"],
+        report_version=str(data.get("report_version", "")),
+        collector_version=str(data.get("collector_version", "unknown")),
+        run_id=str(data.get("run_id", "")),
+        generated_at=str(data.get("generated_at", "")),
+        status=str(data.get("status", "")),
         sources=[
-            metrics_source_from_dict(source)
-            for source in data.get("sources", [])
+            metrics_source_from_dict(source) for source in data.get("sources", [])
         ],
-        summary=metrics_summary_from_dict(
-            data.get("summary", {})
-        ),
-        metrics=[
-            metric_record_from_dict(metric)
-            for metric in data.get("metrics", [])
-        ],
-        warnings=list(data.get("warnings", [])),
+        summary=metrics_summary_from_dict(data.get("summary", {})),
+        metrics=[metric_record_from_dict(metric) for metric in data.get("metrics", [])],
+        warnings=[str(warning) for warning in data.get("warnings", [])],
     )

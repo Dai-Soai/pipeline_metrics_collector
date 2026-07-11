@@ -31,11 +31,7 @@ def write_event_log(path):
     ]
 
     path.write_text(
-        "\n".join(
-            json.dumps(record)
-            for record in records
-        )
-        + "\n",
+        "\n".join(json.dumps(record) for record in records) + "\n",
         encoding="utf-8",
     )
 
@@ -91,24 +87,24 @@ def test_cli_collect_writes_metrics_report(tmp_path):
     write_runtime_report(runtime_report)
     write_consumer_report(consumer_report)
 
-    exit_code = main([
-        "collect",
-        "--event-log",
-        str(event_log),
-        "--runtime-report",
-        str(runtime_report),
-        "--consumer-report",
-        str(consumer_report),
-        "--output-dir",
-        str(output_dir),
-        "--run-id",
-        "run-cli-001",
-    ])
+    exit_code = main(
+        [
+            "collect",
+            "--event-log",
+            str(event_log),
+            "--runtime-report",
+            str(runtime_report),
+            "--consumer-report",
+            str(consumer_report),
+            "--output-dir",
+            str(output_dir),
+            "--run-id",
+            "run-cli-001",
+        ]
+    )
 
     assert exit_code == 0
-    assert (
-        output_dir / "pipeline_metrics.json"
-    ).exists()
+    assert (output_dir / "pipeline_metrics.json").exists()
 
 
 def test_cli_collect_report_contains_expected_summary(tmp_path):
@@ -121,22 +117,22 @@ def test_cli_collect_report_contains_expected_summary(tmp_path):
     write_runtime_report(runtime_report)
     write_consumer_report(consumer_report)
 
-    main([
-        "collect",
-        "--event-log",
-        str(event_log),
-        "--runtime-report",
-        str(runtime_report),
-        "--consumer-report",
-        str(consumer_report),
-        "--output-dir",
-        str(output_dir),
-    ])
+    main(
+        [
+            "collect",
+            "--event-log",
+            str(event_log),
+            "--runtime-report",
+            str(runtime_report),
+            "--consumer-report",
+            str(consumer_report),
+            "--output-dir",
+            str(output_dir),
+        ]
+    )
 
     payload = json.loads(
-        (
-            output_dir / "pipeline_metrics.json"
-        ).read_text(encoding="utf-8")
+        (output_dir / "pipeline_metrics.json").read_text(encoding="utf-8")
     )
 
     assert payload["status"] == "completed"
@@ -152,18 +148,18 @@ def test_cli_collect_without_optional_sources_is_partial(tmp_path):
 
     write_event_log(event_log)
 
-    exit_code = main([
-        "collect",
-        "--event-log",
-        str(event_log),
-        "--output-dir",
-        str(output_dir),
-    ])
+    exit_code = main(
+        [
+            "collect",
+            "--event-log",
+            str(event_log),
+            "--output-dir",
+            str(output_dir),
+        ]
+    )
 
     payload = json.loads(
-        (
-            output_dir / "pipeline_metrics.json"
-        ).read_text(encoding="utf-8")
+        (output_dir / "pipeline_metrics.json").read_text(encoding="utf-8")
     )
 
     assert exit_code == 0
@@ -177,19 +173,23 @@ def test_cli_inspect_returns_success(tmp_path):
 
     write_event_log(event_log)
 
-    main([
-        "collect",
-        "--event-log",
-        str(event_log),
-        "--output-dir",
-        str(output_dir),
-    ])
+    main(
+        [
+            "collect",
+            "--event-log",
+            str(event_log),
+            "--output-dir",
+            str(output_dir),
+        ]
+    )
 
-    exit_code = main([
-        "inspect",
-        "--report",
-        str(output_dir / "pipeline_metrics.json"),
-    ])
+    exit_code = main(
+        [
+            "inspect",
+            "--report",
+            str(output_dir / "pipeline_metrics.json"),
+        ]
+    )
 
     assert exit_code == 0
 
@@ -200,19 +200,23 @@ def test_cli_validate_returns_success_for_valid_report(tmp_path):
 
     write_event_log(event_log)
 
-    main([
-        "collect",
-        "--event-log",
-        str(event_log),
-        "--output-dir",
-        str(output_dir),
-    ])
+    main(
+        [
+            "collect",
+            "--event-log",
+            str(event_log),
+            "--output-dir",
+            str(output_dir),
+        ]
+    )
 
-    exit_code = main([
-        "validate",
-        "--report",
-        str(output_dir / "pipeline_metrics.json"),
-    ])
+    exit_code = main(
+        [
+            "validate",
+            "--report",
+            str(output_dir / "pipeline_metrics.json"),
+        ]
+    )
 
     assert exit_code == 0
 
@@ -220,27 +224,33 @@ def test_cli_validate_returns_success_for_valid_report(tmp_path):
 def test_cli_validate_returns_failure_for_invalid_report(tmp_path):
     report_path = tmp_path / "pipeline_metrics.json"
     report_path.write_text(
-        json.dumps({
-            "status": "completed",
-        }),
+        json.dumps(
+            {
+                "status": "completed",
+            }
+        ),
         encoding="utf-8",
     )
 
-    exit_code = main([
-        "validate",
-        "--report",
-        str(report_path),
-    ])
+    exit_code = main(
+        [
+            "validate",
+            "--report",
+            str(report_path),
+        ]
+    )
 
     assert exit_code == 1
 
 
 def test_cli_validate_returns_failure_for_missing_report(tmp_path):
-    exit_code = main([
-        "validate",
-        "--report",
-        str(tmp_path / "missing.json"),
-    ])
+    exit_code = main(
+        [
+            "validate",
+            "--report",
+            str(tmp_path / "missing.json"),
+        ]
+    )
 
     assert exit_code == 1
 
@@ -251,20 +261,47 @@ def test_cli_collect_supports_custom_run_id(tmp_path):
 
     write_event_log(event_log)
 
-    main([
-        "collect",
-        "--event-log",
-        str(event_log),
-        "--output-dir",
-        str(output_dir),
-        "--run-id",
-        "custom-run-001",
-    ])
+    main(
+        [
+            "collect",
+            "--event-log",
+            str(event_log),
+            "--output-dir",
+            str(output_dir),
+            "--run-id",
+            "custom-run-001",
+        ]
+    )
 
     payload = json.loads(
-        (
-            output_dir / "pipeline_metrics.json"
-        ).read_text(encoding="utf-8")
+        (output_dir / "pipeline_metrics.json").read_text(encoding="utf-8")
     )
 
     assert payload["run_id"] == "custom-run-001"
+
+
+def test_cli_collect_report_contains_collector_version(
+    tmp_path,
+):
+    event_log = tmp_path / "runtime_events.jsonl"
+    output_dir = tmp_path / "output"
+
+    write_event_log(event_log)
+
+    exit_code = main(
+        [
+            "collect",
+            "--event-log",
+            str(event_log),
+            "--output-dir",
+            str(output_dir),
+        ]
+    )
+
+    payload = json.loads(
+        (output_dir / "pipeline_metrics.json").read_text(encoding="utf-8")
+    )
+
+    assert exit_code == 0
+    assert payload["report_version"] == "1.0"
+    assert payload["collector_version"] == "0.1.0"

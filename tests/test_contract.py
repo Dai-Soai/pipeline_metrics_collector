@@ -123,6 +123,7 @@ def test_metrics_summary_from_dict_uses_defaults():
 def test_metrics_report_to_dict():
     report = MetricsReport(
         report_version="1.0",
+        collector_version="0.1.0",
         run_id="run-001",
         generated_at="2026-07-11T06:00:00+00:00",
         status="completed",
@@ -198,3 +199,36 @@ def test_metrics_report_from_dict():
     assert report.summary.acceptance_rate == 0.8
     assert report.metrics[0].category == "consumer"
     assert report.warnings == []
+
+
+def test_metrics_report_preserves_collector_version():
+    report = MetricsReport(
+        report_version="1.0",
+        collector_version="0.1.0",
+        run_id="run-001",
+        generated_at="2026-07-11T07:00:00+00:00",
+        status="completed",
+    )
+
+    payload = metrics_report_to_dict(report)
+    loaded = metrics_report_from_dict(payload)
+
+    assert payload["collector_version"] == "0.1.0"
+    assert loaded.collector_version == "0.1.0"
+
+
+def test_metrics_report_from_dict_supports_legacy_report():
+    payload = {
+        "report_version": "1.0",
+        "run_id": "legacy-run",
+        "generated_at": "2026-07-11T07:00:00+00:00",
+        "status": "completed",
+        "sources": [],
+        "summary": {},
+        "metrics": [],
+        "warnings": [],
+    }
+
+    report = metrics_report_from_dict(payload)
+
+    assert report.collector_version == "unknown"
